@@ -1,0 +1,8 @@
+---
+galaxy_info:
+  author: Ketan Patel <k2patel@live.com>
+  description: Install and configure postfix on server.
+  galaxy_tags: [ 'postfix', 'mail']
+  license: MIT
+  min_ansible_version: "2.1"
+dependencies: []

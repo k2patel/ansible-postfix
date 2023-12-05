@@ -1,0 +1,16 @@
+---
+# Configure selinux for postfix
+- name: Configure selinux for postfix
+  seboolean:
+    name: "{{ selinux_boolean.key }}"
+    state: "{{ selinux_boolean.value }}"
+  loop: "{{ postfix_selinux_options[environment] | dict2items }}"
+  notify: Restart Postfix
+  loop_control:
+    loop_var: selinux_boolean
+
+# - name: Set SELinux boolean for OpenDKIM
+#   seboolean:
+#     name: postfix_can_milter
+#     state: yes
+#   notify: Restart Postfix

@@ -1,0 +1,19 @@
+PidFile	/var/run/opendkim/opendkim.pid
+Mode	sv
+Syslog	yes
+SyslogSuccess	yes
+LogWhy	yes
+UserID	opendkim:opendkim
+Socket	{{ dkim_config_options[environment].opendkim_inet }}:{{ dkim_config_options[environment].opendkim_port }}@{{ dkim_config_options[environment].opendkim_host }}
+Umask	002
+SendReports	yes
+SoftwareHeader	yes
+Canonicalization	relaxed/simple
+Domain	{{ postfix_config_options[environment].opendkim_domain }}
+Selector    {{ ansible_hostname }}
+MinimumKeyBits	1024
+KeyTable	{{ opendkim_config_path[environment] }}/KeyTable
+SigningTable	refile:{{ opendkim_config_path[environment] }}/SigningTable
+ExternalIgnoreList	{{ opendkim_config_path[environment] }}/TrustedHosts
+InternalHosts	{{ opendkim_config_path[environment] }}/TrustedHosts
+OversignHeaders	From

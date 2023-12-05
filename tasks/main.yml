@@ -1,0 +1,62 @@
+# tasks/main.yml
+---
+# Inatall postfix
+- name: Install Postfix packages
+  package:
+    name: "{{ postfix_package_name }}"
+    state: present
+  loop:
+    - postfix
+    - postfix-pcre
+  vars:
+    ansible_facts_update: true
+  loop_control:
+    loop_var: postfix_package_name
+
+# Configure Postfix main.cf
+- name: Configure Postfix for SMTPS
+  lineinfile:
+    path: "{{ postfix_main_cf_path[environment] }}"
+    regexp: "^{{ postfix_config_item.key }} ="
+    line: "{{ postfix_config_item.key }} = {{ postfix_config_item.value }}"
+    state: present
+  loop: "{{ postfix_config_options[environment] | dict2items }}"
+  notify: Restart Postfix
+  loop_control:
+    loop_var: postfix_config_item
+
+# Configure templates
+- name: Configure HeaderChecks
+  template:
+    src: "{{ postfix_template_hash.src }}"
+    dest: "{{ postfix_template_hash.dest }}"
+  notify:
+    - Restart Postfix
+  loop:
+    - { src: 'header_checks.j2', dest: "{{ postfix_header_checks_path[environment] }}" }
+    - { src: 'smtp_consul.hcl.j2', dest: "/root/smtp_consul.hcl" }
+    - { src: 'smtp_check.sh.j2', dest: "/root/smtp_check.sh" }
+  loop_control:
+    loop_var: postfix_template_hash
+
+# Configure postfix smtp-submission
+- name: Configure postfix submission master.cf
+  blockinfile:
+    path: "{{ postfix_master_cf_path[environment] }}"
+    block: |
+      submission inet n       -       n       -       -       smtpd
+        -o syslog_name=postfix/submission
+        -o smtpd_tls_security_level=encrypt
+    state: present
+  notify: Restart Postfix
+
+## Import task based on the variable defined.
+- name: Configure supporting packages
+  ansible.builtin.include_tasks: "{{ enabled_task_profile }}"
+  loop:
+    - "{{ 'opendkim.yml' if opendkim_install[environment] else '' }}"
+    - "{{ 'firewall.yml' if firewall_install[environment] else '' }}"
+    - "{{ 'selinux.yml' if opendkim_install[environment] else '' }}"
+  when: "enabled_task_profile != ''"
+  loop_control:
+    loop_var: enabled_task_profile

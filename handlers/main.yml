@@ -1,0 +1,23 @@
+---
+- name: Check postfix
+  command: postfix check
+  when: postfix_check
+  changed_when: false
+
+- name: Restart Postfix
+  systemd:
+    name: postfix
+    enabled: yes
+    state: restarted
+
+- name: restart opendkim
+  systemd:
+    name: opendkim
+    enabled: yes
+    state: restarted
+  when: opendkim_install[environment]
+
+- name: Restart firewalld
+  systemd:
+    name: firewalld
+    state: restarted

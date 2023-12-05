@@ -1,0 +1,21 @@
+{
+  "id": "smtp service",
+  "name": "smtp",
+  "port": 25,
+  "checks": [
+    {
+      "name": "smtp tcp check",
+      "tcp": "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:25",
+      "interval": "30s",
+      "timeout": "5s"
+    },
+    {
+      "name": "smtp mailq check",
+      "args": [
+        "/opt/consul/checks/smtp_check.sh"
+      ],
+      "interval": "30s",
+      "timeout": "5s"
+    }
+  ]
+}

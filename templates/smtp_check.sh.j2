@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+# Get the number of emails in the Postfix mail queue
+queue_count=$(postqueue -p | tail -n 1 | awk '{print $5}')
+
+# Define the threshold for the queue count
+threshold={{ consul_mailq_thresholds[environment]['critical'] }}
+
+# Check if the queue count is empty or the message "Mail queue is empty"
+if [ -z "$queue_count" ] || [ "$queue_count" == "Mail" ]; then
+  echo "OK: Postfix mail queue is empty"
+  exit 0  # Exit with status 0 to indicate OK status
+elif [[ "$queue_count" =~ ^[0-9]+$ ]]; then
+  # Convert to an integer for comparison
+  queue_count=$((10#$queue_count))
+
+  # Check if the queue count is greater than the threshold
+  if [ "$queue_count" -gt "$threshold" ]; then
+    echo "CRITICAL: Postfix mail queue has more than $threshold emails"
+    exit 2  # Exit with status 2 to indicate critical status
+  else
+    echo "OK: Postfix mail queue is within acceptable limits"
+    exit 0  # Exit with status 0 to indicate OK status
+  fi
+else
+  echo "UNKNOWN: Unable to determine the number of emails in the Postfix mail queue"
+  exit 3  # Exit with status 3 to indicate unknown status
+fi

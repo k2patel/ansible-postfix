@@ -1,0 +1,9 @@
+# /etc/systemd/system/opendkim.socket
+
+[Unit]
+Description=OpenDKIM DomainKeys Identified Mail (DKIM) Milter
+Documentation=man:opendkim(8) man:opendkim.conf(5)
+
+[Socket]
+ListenStream="{{ dkim_config_options[environment].opendkim_inet }}:{{ dkim_config_options[environment].opendkim_port }}@localhost"
+Accept=yes

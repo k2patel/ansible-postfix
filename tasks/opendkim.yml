@@ -1,0 +1,81 @@
+---
+- name: Install OpenDKIM
+  package:
+    name: "{{ package_name }}"
+    state: present
+  loop:
+    - opendkim
+    - opendkim-tools
+  loop_control:
+    loop_var: package_name
+
+# Create OpenDKIM user
+- name: Create OpenDKIM directory
+  file:
+    path: "{{ opendkim_config_path[environment] }}/keys"
+    state: directory
+    owner: "{{ dkim_config_options[environment].opendkim_user }}"
+    group: "{{ dkim_config_options[environment].opendkim_group }}"
+    mode: '0755'
+
+# Generate OpenDKIM key pair
+- name: Generate OpenDKIM key pair
+  command: "opendkim-genkey -b {{ dkim_config_options[environment].opendkim_bits }} -d {{ postfix_config_options[environment].opendkim_domain }} -D /etc/opendkim/keys -s {{ ansible_hostname }} -v"
+  args:
+    creates: "{{ opendkim_config_path[environment] }}/keys/{{ ansible_hostname }}.private"
+  register: opendkim_key_result
+
+# Register public key for display purposes
+- name: Display DNS record
+  command: "cat {{ opendkim_config_path[environment] }}/keys/{{ ansible_hostname }}.txt"
+  register: opendkim_dns_record
+
+# Set permissions for OpenDKIM keys
+- name: Set permissions for OpenDKIM keys
+  file:
+    path: "{{ keyfile_name }}"
+    state: file
+    owner: "{{ dkim_config_options[environment].opendkim_user }}"
+    group: "{{ dkim_config_options[environment].opendkim_group }}"
+    mode: '0640'
+  loop:
+    - "{{ opendkim_config_path[environment] }}/keys/{{ ansible_hostname }}.private"
+    - "{{ opendkim_config_path[environment] }}/keys/{{ ansible_hostname }}.txt"
+  loop_control:
+    loop_var: keyfile_name
+
+# Configure OpenDKIM
+- name: Configure OpenDKIM
+  template:
+    src: "{{ dkim_config_hash.src }}"
+    dest: "{{ dkim_config_hash.dest }}"
+    owner: "{{ dkim_config_options[environment].opendkim_user }}"
+    group: "{{ dkim_config_options[environment].opendkim_group }}"
+    mode: '0640'
+  notify:
+    - restart opendkim
+  loop:
+    - { src: 'KeyTable.j2', dest: "{{ opendkim_config_path[environment] }}/KeyTable" }
+    - { src: 'SigningTable.j2', dest: "{{ opendkim_config_path[environment] }}/SigningTable" }
+    - { src: 'TrustedHosts.j2', dest: "{{ opendkim_config_path[environment] }}/TrustedHosts" }
+    - { src: 'opendkim.conf.j2', dest: '/etc/opendkim.conf' }
+    - { src: 'opendkim.socket.j2', dest: '/etc/systemd/system/opendkim.socket' }
+  loop_control:
+    loop_var: dkim_config_hash
+
+- name: Enable and start OpenDKIM service
+  systemd:
+    name: opendkim
+    enabled: yes
+    state: started
+
+# Display OpenDKIM DNS Record
+- name: Display OpenDKIM DNS Record
+  shell: echo -e "" >/dev/tty
+    --------------------------------------------------------------------------------------\\n
+    OpenDKIM DNS Record:\\n
+    '{{ opendkim_dns_record.stdout }}'\\n
+    --------------------------------------------------------------------------------------\\n
+  delegate_to: localhost
+  become: false
+  when: opendkim_dns_record.stdout != ''

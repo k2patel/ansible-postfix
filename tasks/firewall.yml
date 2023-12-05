@@ -1,0 +1,13 @@
+---
+- name: Configure firewalld for SMTP
+  firewalld:
+    service: "{{ firewall_services }}"
+    permanent: yes
+    state: enabled
+  notify: Restart firewalld
+  loop: 
+    - smtp
+    - smtps
+    - smtp-submission
+  loop_control:
+    loop_var: firewall_services

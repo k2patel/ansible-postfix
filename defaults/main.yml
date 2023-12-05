@@ -1,0 +1,79 @@
+---
+# OpenDKIM and Postfix configuration
+opendkim_config_path:
+  dev: '/etc/opendkim'
+postfix_main_cf_path: 
+  dev: '/etc/postfix/main.cf'
+postfix_master_cf_path:
+  dev: '/etc/postfix/master.cf'
+postfix_header_checks_path:
+  dev: '/etc/postfix/header_checks'
+
+# Enable disable services
+opendkim_install:
+  dev: true
+firewall_install:
+  dev: true
+
+dkim_config_options:
+  dev:
+    opendkim_inet: "inet"
+    opendkim_port: "8891"
+    opendkim_user: "opendkim"
+    opendkim_group: "opendkim"
+    opendkim_host: "127.0.0.1"
+    opendkim_bits: 1024
+
+postfix_config_options:
+  dev:
+    header_checks: "pcre:{{ postfix_header_checks_path[environment] }}"
+    delay_warning_time: "0h"
+    inet_interfaces: "all"
+    inet_protocols: "all"
+    maximal_queue_lifetime: "1d"
+    message_size_limit: 30720000
+    mynetworks_style: "subnet"
+    myorigin: "domain.com"
+    mynetworks: "10.10.1.0/24 192.168.1.0/24"
+    myhostname: "{{ ansible_fqdn }}"
+    smtpd_tls_security_level: "may"
+    smtpd_tls_cert_file: "/etc/pki/tls/certs/host.crt"
+    smtpd_tls_key_file: "/etc/pki/tls/private/host.key"
+    smtpd_tls_CAfile: "/etc/pki/tls/certs/ca-bundle.crt"
+    smtp_tls_cert_file: "/etc/pki/tls/certs/host.crt"
+    smtp_tls_key_file: "/etc/pki/tls/private/host.key"
+    smtp_tls_CAfile: "/etc/pki/tls/certs/ca-bundle.crt"
+    smtpd_tls_auth_only: "yes"
+    smtp_tls_loglevel: 1
+    opendkim_domain: "domain.com"
+    smtpd_milters: "inet:127.0.0.1:8891"
+    non_smtpd_milters: "inet:127.0.0.1:8891"
+    milter_default_action: "accept"
+    smtpd_tls_protocols: "!SSLv2, !SSLv3"
+    smtp_tls_protocols: "!SSLv2, !SSLv3"
+    smtp_tls_session_cache_database: "btree:${data_directory}/smtp_scache"
+    smtpd_tls_session_cache_database: "btree:${data_directory}/smtpd_scache"
+    smtp_tls_security_level: "encrypt"
+    always_add_missing_headers: "yes"
+
+postfix_selinux_options:
+  dev: {}
+  # postfix_can_network_connect: "on"
+  # postfix_can_sendmail: "on"
+
+postfix_header_checks:
+  dev:
+    - '/^\s*(Received: from)[^\n]*(.*)/ REPLACE $1 [127.0.0.1] (localhost [127.0.0.1])$2'
+    - '/^X-Originating-IP:/    IGNORE'
+
+dkim_trusted_hosts:
+  dev:
+    - "127.0.0.1"
+    - "::1"
+    - "10.0.0.0/8"
+    - "192.168.1.0/24"
+
+# Consul check thresholds
+consul_mailq_thresholds:
+  dev:
+    critical: 100
